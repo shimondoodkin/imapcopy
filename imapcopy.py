@@ -84,6 +84,7 @@ class IMAP_Copy(object):
         s = str(s).strip().replace(' ', '_')
         return re.sub(r'(?u)[^-\w.]', '', s)
 
+    #not used
     def refresh_token(self, token_filename, refresh_token):
         data = {
             'refresh_token': refresh_token,
