@@ -9,11 +9,43 @@
     :license: BSD, see LICENSE for more details.
 """
 
+import base64
 import sys
 import hashlib
 import imaplib
+
 import logging
 import argparse
+import webbrowser
+import urllib.request
+import urllib.parse
+import os.path
+import os
+import re
+import json
+
+# got the client_id and client_secret from
+
+# in google console https://console.cloud.google.com/ 
+# need to create a project (in drop down select box on top bar near logo)
+
+# in that app in credentials https://console.cloud.google.com/apis/credentials
+# need to create a client id (in button ' + CREATE CREDENCIALS ' select 'Oauth Client ID', application type is desktop application)
+
+# to be able to use oauth consent screen
+# in OAuth consent screen https://console.cloud.google.com/apis/credentials/consent
+# Edit App (
+#   fill in app name and suer support email, Developer contact information, do not fill App domain links or add Authorized domains, click save and continue. 
+#   click ' ADD OR REMOVE SCOPES ', then type in the Manually add scopes text box the scope 'https://mail.google.com/' and click add to table.
+# )
+# select User type to be External.
+# in Test users, add your emails to be able to use them as consent screen users.
+
+client_id = "828156503889-41nsi1nh4gdgv2b6f0mj6ss8fh9dhgca.apps.googleusercontent.com"
+client_secret =  "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"
+# redirect_uri = "http://localhost"
+# redirect_uri = "http://localhost:1410/"
+redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'         # dummy url for non web apps
 
 
 class IMAP_Copy(object):
@@ -48,6 +80,67 @@ class IMAP_Copy(object):
 
         self.recurse = recurse
 
+    def get_valid_filename(self, s):
+        s = str(s).strip().replace(' ', '_')
+        return re.sub(r'(?u)[^-\w.]', '', s)
+
+    def refresh_token(self, token_filename, refresh_token):
+        data = {
+            'refresh_token': refresh_token,
+            'client_id': client_id,
+            'client_secret': client_secret,
+            'grant_type': 'refresh_token',
+            'access_type': 'offline'
+        }
+        
+        request = urllib.request.Request(url='https://accounts.google.com/o/oauth2/token',
+         data=urllib.parse.urlencode(data).encode("utf-8"))
+        token_json_str = urllib.request.urlopen(request).read().decode("utf-8")
+        #  print(request_open)
+
+        self.save_xoauth_token(token_filename, token_json_str)
+
+    def get_token(self, token_filename, redirect_uri, auth_code):
+        data = {
+          'code': auth_code,
+          'client_id': client_id,
+          'client_secret': client_secret,
+          'redirect_uri': redirect_uri,
+          'grant_type': 'authorization_code'
+        }
+        request = urllib.request.Request(url='https://accounts.google.com/o/oauth2/token', data=urllib.parse.urlencode(data).encode("utf-8"))
+        request_open = urllib.request.urlopen(request).read().decode("utf-8")
+        #  print(request_open)
+
+        self.save_xoauth_token(token_filename, request_open)
+
+    def xoauth_login(self, username,token_filename):
+                
+        ft_scope = 'https://mail.google.com/'
+
+        consent_screen_url = 'https://accounts.google.com/o/oauth2/auth?' + urllib.parse.urlencode({
+            'client_id': client_id,
+            'scope': ft_scope,
+            'redirect_uri': redirect_uri,
+            'response_type': 'code',
+            'access_type': 'offline'
+        })
+
+        webbrowser.open_new(consent_screen_url)
+
+        auth_code = input('Enter code here: ')
+
+        #auth_code = "4/VgAQUn_aLn6xsTTyhQB7iDF7e4zjM7AonRXjw58lqL4Z8qpHR4uOT0A"
+
+        self.get_token(token_filename, redirect_uri, auth_code)
+
+    def save_xoauth_token(self, token_filename, token_json_str):
+        #save to file
+        text_file = open(token_filename, "w")
+        text_file.write(token_json_str)
+        text_file.close()
+        
+        
     def _connect(self, target):
         data = getattr(self, target)
         auth = getattr(self, target + "_auth")
@@ -59,8 +152,59 @@ class IMAP_Copy(object):
             connection = imaplib.IMAP4(data['host'], data['port'])
 
         if len(auth) > 0:
-            self.logger.info("Authenticate at %s" % target)
-            connection.login(*auth)
+            self.logger.info(f"Authenticate at {target} for username {auth[0]}")
+            password:str=auth[1]
+
+            if password.lower()!="xoauth":
+               connection.login(*auth) # simple auth
+            else:
+
+                # xoauth
+                
+                """Generates an IMAP OAuth2 authentication string.
+
+                   See https://developers.google.com/google-apps/gmail/oauth2_overview
+
+                  Args:
+                    username: the username (email address) of the account to authenticate
+                    access_token: An OAuth2 access token.
+                    base64_encode: Whether to base64-encode the output.
+
+                  Returns:
+                    The SASL argument for the OAuth2 mechanism.
+                """
+                username=auth[0]
+                access_token=False
+
+                token_filename=self.get_valid_filename(username)+".txt"
+
+                if not os.path.exists(token_filename):
+                    self.xoauth_login(username, token_filename)
+                
+                if os.path.exists(token_filename):
+                    text_file = open(token_filename, "r")
+                    access_token_json=json.loads(text_file.read())
+                    access_token=access_token_json["access_token"]
+                    text_file.close()
+
+                if access_token:
+                    auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
+                else:
+                    self.logger.error("No token for ussername in file: %s. removing saved token file. try again." % str(username))
+                    if os.path.exists(token_filename):
+                        os.remove(token_filename)
+                    exit();
+
+                #  Must not be base64-encoded, since imaplib does its own base64-encoding.
+                # base64_encode=True
+                # if base64_encode:
+                #     auth_string = base64.b64encode(auth_string.encode('utf-8'))
+
+                # return auth_string
+                # connection.debug = 4
+            
+                connection.authenticate('XOAUTH2', lambda x: auth_string)
+
 
         setattr(self, '_conn_%s' % target, connection)
         self.logger.info("%s connection established" % target)
@@ -192,11 +336,11 @@ class IMAP_Copy(object):
             typ, data = connection.list(source_folder)
             for d in data:
                 if d:
-                    l_resp = d.split('"')
+                    l_resp = d.split(b'"')
                     # response = '(\HasChildren) "/" INBOX'
                     if len(l_resp) == 3:
 
-                        source_mbox = d.split('"')[2].strip()
+                        source_mbox = d.split(b'"')[2].strip()
                         # make sure we don't have a recursive loop
                         if source_mbox != source_folder:
                             # maybe better use regex to replace only start of the souce name
