@@ -3,7 +3,8 @@ IMAP Copy
 
 A simple utility to copy folders between IMAP mail servers.
 
-It only requires standard Python 3.5 or later.
+It only requires standard Python 3.5 or later. 
+For windows 7 probably need Python 3.7
 
 Examples
 --------
@@ -25,6 +26,34 @@ will be listed:
       --test \
       "imap.googlemail.com:993"     "username@gmail.com:password" \
       "imap.otherserver.com.au:993" "username:password"
+
+# Useful url:
+# https://accounts.google.com/b/0/DisplayUnlockCaptcha if you login with password
+# https://myaccount.google.com/apppasswords might work, probably requires 2-step verification set to ON 
+
+
+XOAUTH support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+to login to gmail with oauth, the password should be equal to 'xoauth'
+::
+
+    python3 imapcopy.py \
+      --test \
+      "imap.googlemail.com:993"     "username@gmail.com:xoauth" \
+      "imap.otherserver.com.au:993" "username:not supported"
+
+My credencial probably wont work for you. So you need to get your own, and edit the code to add them.
+I got the client_id and client_secret from:
+
+    - In google console https://console.cloud.google.com/ 
+      need to create a project (in drop down select box on top bar near logo)
+    - In that app, in project's menu (on side) in Credentials https://console.cloud.google.com/apis/credentials
+       - need to create a client id (in button ' + CREATE CREDENCIALS ' select 'Oauth Client ID', application type is desktop application), fill in the given values in the code.
+    - To be able to use oauth consent screen, In project's menu (on side) in OAuth consent screen https://console.cloud.google.com/apis/credentials/consent
+       - Edit App ( fill in app name and suer support email, Developer contact information, do not fill App domain links or add Authorized domains, click save and continue.  click ' ADD OR REMOVE SCOPES ', then type in the Manually add scopes text box the scope 'https://mail.google.com/' and click add to table. )
+       - select User type to be External.
+       - in Test users, add your emails to be able to use them as consent screen users.
+
 
 Copying messages from folders
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
