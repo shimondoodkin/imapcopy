@@ -35,7 +35,7 @@ Useful url:
 
 XOAUTH support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-to login to gmail with oauth, the password should be equal to 'xoauth'
+In order to login to gmail with oauth, the password should be equal to 'xoauth'
 ::
 
     python3 imapcopy.py \
