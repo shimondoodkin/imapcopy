@@ -1,3 +1,4 @@
+This application is a personal use application. 
 This application does not use or store any of your data, working just as a pipe.
 
 Warning:
