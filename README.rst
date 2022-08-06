@@ -27,6 +27,8 @@ will be listed:
       "imap.googlemail.com:993"     "username@gmail.com:password" \
       "imap.otherserver.com.au:993" "username:password"
 
+To do migration from Google Workspace, use imap.googlemail.com:993 as server and you youremail@yourdomain.com as username
+
 Useful url:
 --------
 - https://accounts.google.com/b/0/DisplayUnlockCaptcha if you login with password
