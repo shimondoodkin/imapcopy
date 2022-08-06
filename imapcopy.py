@@ -24,23 +24,6 @@ import os
 import re
 import json
 
-# got the client_id and client_secret from
-
-# in google console https://console.cloud.google.com/ 
-# need to create a project (in drop down select box on top bar near logo)
-
-# in that app in credentials https://console.cloud.google.com/apis/credentials
-# need to create a client id (in button ' + CREATE CREDENCIALS ' select 'Oauth Client ID', application type is desktop application)
-
-# to be able to use oauth consent screen
-# in OAuth consent screen https://console.cloud.google.com/apis/credentials/consent
-# Edit App (
-#   fill in app name and suer support email, Developer contact information, do not fill App domain links or add Authorized domains, click save and continue. 
-#   click ' ADD OR REMOVE SCOPES ', then type in the Manually add scopes text box the scope 'https://mail.google.com/' and click add to table.
-# )
-# select User type to be External.
-# in Test users, add your emails to be able to use them as consent screen users.
-
 client_id = "828156503889-41nsi1nh4gdgv2b6f0mj6ss8fh9dhgca.apps.googleusercontent.com"
 client_secret =  "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"
 # redirect_uri = "http://localhost"
